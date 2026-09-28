@@ -1,0 +1,885 @@
+<title>Libreta Clue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#EBEFEA; --surface:#F8FAF6; --ink:#14201F; --ink2:#485956; --line:#C8D1CB;
+  --brass:#7E5709; --brass-bg:#F0E2BC; --brass-line:#C9A44D;
+  --yes:#1B6656; --yes-bg:#D2EBE2; --no:#8A3A3A; --no-bg:#F0DCDC;
+  --warn-bg:#F6E0C8; --warn:#8A4A0B;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0B1315; --surface:#122022; --ink:#E8E4D7; --ink2:#9DB1AD; --line:#293C3E;
+    --brass:#E3B65A; --brass-bg:#362C13; --brass-line:#7A6224;
+    --yes:#72D2B8; --yes-bg:#173D35; --no:#DC8F8F; --no-bg:#3B2022;
+    --warn-bg:#3B2A15; --warn:#EDB06B;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0B1315; --surface:#122022; --ink:#E8E4D7; --ink2:#9DB1AD; --line:#293C3E;
+  --brass:#E3B65A; --brass-bg:#362C13; --brass-line:#7A6224;
+  --yes:#72D2B8; --yes-bg:#173D35; --no:#DC8F8F; --no-bg:#3B2022;
+  --warn-bg:#3B2A15; --warn:#EDB06B;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:860px;margin-inline:auto;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--f-display);font-weight:800;letter-spacing:.02em;text-transform:uppercase;margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,7vw,52px);line-height:.95}
+.kicker{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass)}
+header{display:flex;flex-direction:column;gap:6px}
+header p{margin:0;color:var(--ink2);max-width:60ch}
+
+/* Sobre */
+.case{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.case.solved{border-color:var(--brass-line);background:var(--brass-bg)}
+.slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.slot{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;min-width:0}
+.slot.known{border:1px solid var(--brass-line);background:var(--surface)}
+.slot .lb{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+.slot .vl{font-family:var(--f-display);font-weight:700;font-size:24px;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
+.slot.known .vl{color:var(--brass)}
+.slot .vl.guess{color:var(--ink)}
+.slot .sb{font-size:12px;color:var(--ink2)}
+.msg{margin:0;font-size:14px}
+.msg b{font-weight:600}
+.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brass);width:0}
+.barrow{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;color:var(--ink2);gap:8px}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:10px 12px;font-size:13.5px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{appearance:none;background:none;border:0;border-bottom:3px solid transparent;color:var(--ink2);font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.05em;text-transform:uppercase;padding:8px 14px;cursor:pointer;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--brass)}
+.tab:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* Libreta */
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink2);margin:0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.tablewrap{overflow:auto;max-height:min(74vh,640px);border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:separate;border-spacing:0;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:0;text-align:center;font-weight:400}
+tr:last-child td{border-bottom:0}
+thead th{font-family:var(--f-mono);font-size:12px;font-weight:500;letter-spacing:.02em;color:var(--ink);padding:8px 2px;position:sticky;top:0;z-index:3;background:var(--surface);min-width:60px;max-width:84px;border-bottom:2px solid var(--brass-line)}
+thead th .pn{display:block;white-space:normal;overflow-wrap:anywhere;line-height:1.15;padding-inline:4px}
+thead th.me{color:var(--brass)}
+th.first,td.first{position:sticky;left:0;z-index:2;background:var(--surface);text-align:left;min-width:176px;padding-inline:12px 8px;border-right:1px solid var(--line)}
+thead th.first{z-index:4}
+tr.cat td{background:var(--bg);font-family:var(--f-display);font-weight:800;font-size:17px;letter-spacing:.1em;text-transform:uppercase;text-align:left;padding:6px 12px;color:var(--ink2)}
+tr.cat td.first{background:var(--bg)}
+.nm{display:block;font-weight:500;overflow-wrap:anywhere}
+.tag{display:block;font-family:var(--f-mono);font-size:11px;color:var(--ink2)}
+tr.gone .nm{text-decoration:line-through;color:var(--ink2);font-weight:400}
+tr.env td,tr.env td.first{background:var(--brass-bg)}
+tr.env .nm{color:var(--brass);font-weight:600}
+tr.env .tag{color:var(--brass)}
+.cb{position:relative;appearance:none;width:44px;height:44px;margin:0 auto;display:grid;place-items:center;background:transparent;border:1px solid transparent;border-radius:8px;font-family:var(--f-mono);font-size:18px;color:var(--ink2);cursor:pointer}
+.numbadge{position:absolute;bottom:1px;right:2px;font-family:var(--f-mono);font-size:9px;line-height:1;font-weight:600;color:var(--ink2);background:var(--surface);border-radius:3px;padding:0 2px;pointer-events:none}
+.numin{appearance:none;width:44px;height:44px;margin:0 auto;display:block;text-align:center;background:var(--surface);border:1px dashed var(--brass-line);border-radius:8px;font-family:var(--f-mono);font-size:14px;color:var(--brass);padding:0}
+.numin:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.cb:hover{background:var(--bg)}
+.cb.y{color:var(--yes);background:var(--yes-bg);font-weight:700}
+.cb.n{color:var(--no);background:var(--no-bg)}
+.cb.m.y{border-color:var(--yes)}
+.cb.m.n{border-color:var(--no)}
+.cb.a{border-style:dashed;border-color:var(--line)}
+.cb.a.y{border-color:var(--yes)}
+.cb.a.n{border-color:var(--no)}
+.cb.gn{color:var(--no);border:1px solid var(--no);font-weight:700}
+.cb.gy{color:var(--yes);border:1px solid var(--yes);font-weight:700}
+.sw{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:5px;font-family:var(--f-mono);font-size:13px}
+.sw.y{background:var(--yes-bg);color:var(--yes)}
+.sw.n{background:var(--no-bg);color:var(--no)}
+.sw.a{border:1px dashed var(--ink2);color:var(--ink2)}
+.sw.gn{border:1px solid var(--no);color:var(--no)}
+.sw.gy{border:1px solid var(--yes);color:var(--yes)}
+
+.nmb{appearance:none;background:none;border:2px solid transparent;border-radius:999px;color:inherit;font:inherit;text-align:left;padding:2px 10px;margin-left:-10px;cursor:pointer}
+.nmb:hover{border-color:var(--line)}
+.nmb.hunch{border-color:var(--brass);color:var(--brass);font-weight:600}
+tr.gone .nmb.hunch{border-color:var(--no);color:var(--no)}
+thead th.out .pn{text-decoration:line-through;opacity:.6}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink2);white-space:nowrap}
+.pill.win{border-color:var(--brass);color:var(--brass);background:var(--brass-bg)}
+.pill.fail{border-color:var(--no);color:var(--no);background:var(--no-bg)}
+.hunchp{display:flex;flex-direction:column;gap:10px}
+.hunchp .hint{font-size:12.5px;color:var(--ink2);margin:0}
+.hunchp .hint b{font-weight:600}
+.btn.sm{font-size:16px;padding:6px 12px;min-height:40px}
+.cb.q{border:1px dashed var(--brass-line)}
+.pm{font-family:var(--f-mono);font-size:11px;color:var(--brass);line-height:1;font-weight:500}
+.pl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.pl li{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.pl li:last-child{border-bottom:0;padding-bottom:0}
+.pl .who{font-size:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lb2{font-family:var(--f-mono);font-size:12px;background:var(--brass-bg);color:var(--brass);border:1px solid var(--brass-line);border-radius:6px;padding:1px 7px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg)}
+.chip button{appearance:none;background:none;border:0;color:var(--ink);font-family:var(--f-body);font-size:14px;min-height:40px;padding:0 10px;cursor:pointer}
+.chip button:first-child:hover{background:var(--yes-bg);color:var(--yes)}
+.chip button+button{border-left:1px solid var(--line);color:var(--ink2);padding:0 12px}
+.chip button+button:hover{background:var(--no-bg);color:var(--no)}
+details.hint-add summary{cursor:pointer;font-size:14px;color:var(--brass);min-height:32px;display:flex;align-items:center}
+details.hint-add[open] summary{margin-bottom:10px}
+.say{margin:0;font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.1;text-transform:uppercase;letter-spacing:.02em;overflow-wrap:anywhere}
+.say b{font-weight:800;color:var(--brass)}
+.pr{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.pc{border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink2)}
+.pc.top{border-color:var(--brass-line);color:var(--brass);background:var(--brass-bg)}
+.tip{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px;display:flex;flex-direction:column;gap:4px}
+.tip .kicker{font-size:11px}
+
+/* Forms */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:14px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+select,input[type="text"],input[type="number"]{font-family:var(--f-body);font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 10px;min-height:44px;width:100%;text-transform:none;letter-spacing:0}
+.btn{appearance:none;font-family:var(--f-display);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;background:var(--brass);color:var(--bg);border:0;border-radius:8px;padding:10px 18px;min-height:44px;cursor:pointer}
+:root:not([data-theme="dark"]) .btn{color:#fff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn{color:#0B1315}}
+:root[data-theme="dark"] .btn{color:#0B1315}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+:root:not([data-theme="dark"]) .btn.ghost{color:var(--ink)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.ghost{color:var(--ink)}}
+:root[data-theme="dark"] .btn.ghost{color:var(--ink)}
+.btn.danger{background:var(--no-bg);color:var(--no);border:1px solid var(--no)}
+:root:not([data-theme="dark"]) .btn.danger{color:var(--no)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.danger{color:var(--no)}}
+:root[data-theme="dark"] .btn.danger{color:var(--no)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{appearance:none;border:0;background:var(--bg);color:var(--ink);font-family:var(--f-mono);font-size:15px;min-width:44px;min-height:44px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--brass);color:var(--surface)}
+.plist{display:flex;flex-direction:column;gap:10px}
+.prow{display:grid;grid-template-columns:28px 1fr 92px;gap:10px;align-items:end}
+.prow .ix{font-family:var(--f-mono);color:var(--ink2);padding-bottom:12px}
+.note{font-size:13px;color:var(--ink2);margin:0;max-width:64ch}
+
+/* Log */
+.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.entry{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
+.entry .t{font-weight:500}
+.entry .d{grid-column:1;font-size:13px;color:var(--ink2)}
+.entry .x{grid-row:1 / span 2;grid-column:2;appearance:none;background:none;border:1px solid var(--line);color:var(--ink2);border-radius:8px;min-width:44px;min-height:44px;cursor:pointer;font-family:var(--f-mono)}
+.empty{color:var(--ink2);font-size:14px;margin:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+@media (prefers-reduced-motion: no-preference){.bar i{transition:width .3s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="kicker">Expediente · Mansión Black</span>
+    <h1>¿Quién mató al Dr. Black?</h1>
+    <p>Marca tus cartas, registra cada sugerencia y la libreta descarta por ti. Cuando quede una carta por categoría, acusa.</p>
+  </header>
+
+  <section class="case" id="case" aria-live="polite"></section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="t-nb" data-tab="nb" aria-selected="true">Libreta</button>
+    <button class="tab" role="tab" id="t-mesa" data-tab="mesa" aria-selected="false">Mesa</button>
+  </div>
+
+  <section id="p-nb" role="tabpanel" style="display:flex;flex-direction:column;gap:14px">
+    <p class="legend">
+      <span><b class="lb2">1</b><i class="sw y">✓</i> la tiene</span>
+      <span><b class="lb2">2</b><i class="sw n">✕</i> no la tiene</span>
+      <span><b class="lb2">3</b><i class="sw gn">?</i> creo que no la tiene</span>
+      <span><b class="lb2">4</b><i class="sw gy">?</i> creo que sí la tiene</span>
+      <span><b class="lb2">5</b> vacía · sin marcar</span>
+      <span>Toca la casilla y rota en ese orden, 1 a 5. Los "?" (3 y 4) son tu corazonada; no entran en la deducción.</span>
+      <span><i class="sw a">✕</i> deducido solo (lo pone la libreta, no cuenta como toque)</span>
+      <span>Toca el nombre de una carta: círculo = tu sospecha.</span>
+      <span><i class="sw a" style="border-color:var(--brass-line);color:var(--brass);font-size:10px">#</i> número de pista pendiente</span>
+    </p>
+    <div id="conf"></div>
+    <div class="panel hunchp" id="hunch"></div>
+    <div class="panel hunchp" id="pend"></div>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <span class="note">En modo Números, toca una casilla vacía y escribe tú el número que quieras. Es tu nota personal; no participa en la deducción automática.</span>
+      <div class="seg" id="mode" role="group" aria-label="Modo de casillas">
+        <button type="button" data-mode="mark" aria-pressed="true" title="Marcar con símbolos" style="width:auto;padding-inline:12px">Marcar</button>
+        <button type="button" data-mode="num" aria-pressed="false" title="Escribir números" style="width:auto;padding-inline:12px">Números</button>
+      </div>
+    </div>
+    <div class="tablewrap" tabindex="-1"><table id="grid"></table></div>
+    <div class="tip" id="tip"></div>
+  </section>
+
+  <section id="p-mesa" role="tabpanel" hidden style="display:none;flex-direction:column;gap:20px">
+    <div class="panel" id="intro">
+      <span class="kicker">Antes de empezar</span>
+      <h2 style="font-size:30px">¿Cuántos son y cómo se llaman?</h2>
+      <p class="note">Elige el número de jugadores y escribe los nombres en el orden de los turnos. Tú eres el primero; después va quien juega justo después de ti.</p>
+    </div>
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h3>Jugadores</h3>
+        <div class="seg" id="count" role="group" aria-label="Número de jugadores"></div>
+      </div>
+      <p class="note">Tú eres siempre el jugador 1. Ordena a los demás según el turno, empezando por quien juega justo después de ti. El orden decide quién debió responder cada sugerencia.</p>
+      <div class="plist" id="plist"></div>
+      <p class="note" id="hand-note">Cartas en mano: llénalo solo si lo sabes. Con 3 o 6 jugadores el reparto es parejo y ya viene puesto. Con 2, 4 o 5, cuenta las cartas de cada uno en la mesa y anótalas para que la libreta deduzca más. Con 2 jugadores, revisa el reglamento de tu edición porque puede dejar cartas aparte.</p>
+    </div>
+    <div class="panel" id="startbox">
+      <div class="row"><button class="btn" id="start" type="button">Empezar partida</button><span class="note" id="start-err" role="alert"></span></div>
+    </div>
+
+    <div id="sec-lg" style="display:flex;flex-direction:column;gap:14px">
+      <h3>Sugerencias</h3>
+      <form class="panel" id="form" autocomplete="off">
+        <p class="note">Anota cada sugerencia de la mesa. Si un jugador mostró una carta y tú no viste cuál, elige quién la mostró y deja la carta sin marcar. La libreta guarda una pista con el número de la sugerencia y la ves en Pistas pendientes, en la pestaña Libreta.</p>
+        <div class="grid2">
+          <label>Quién sugiere<select id="f-by"></select></label>
+          <label>Sospechoso<select id="f-s"></select></label>
+          <label>Arma<select id="f-w"></select></label>
+          <label>Habitación<select id="f-r"></select></label>
+          <label>Quién mostró una carta<select id="f-ans"></select></label>
+          <label id="f-shown-wrap">Carta que te mostraron<select id="f-shown"></select></label>
+        </div>
+        <div class="row"><button class="btn" type="submit">Registrar</button><span class="note" id="f-err" role="alert"></span></div>
+      </form>
+      <ul class="log" id="log"></ul>
+    </div>
+
+    <div id="sec-ac" style="display:flex;flex-direction:column;gap:14px">
+      <h3>Acusaciones</h3>
+      <form class="panel" id="aform" autocomplete="off">
+        <p class="note">Anota cada acusación que se haga en la mesa. Si falló, esas tres cartas no son la solución completa y quien acusó queda fuera. Si acertó, la partida terminó y la libreta muestra la solución.</p>
+        <div class="grid2">
+          <label>Quién acusa<select id="a-by"></select></label>
+          <label>Sospechoso<select id="a-s"></select></label>
+          <label>Arma<select id="a-w"></select></label>
+          <label>Habitación<select id="a-r"></select></label>
+          <label>Resultado<select id="a-ok"><option value="0">Falló, queda fuera</option><option value="1">Acertó, ganó</option></select></label>
+        </div>
+        <div class="row"><button class="btn" type="submit">Registrar acusación</button></div>
+      </form>
+      <ul class="log" id="alog"></ul>
+    </div>
+
+    <div class="panel" id="resetbox">
+      <h3>Nueva partida</h3>
+      <p class="note">Borra las marcas y las sugerencias, y vuelve a pedirte jugadores y nombres.</p>
+      <div class="row"><button class="btn danger" id="reset" type="button">Empezar de nuevo</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  var KEY = 'clue-libreta-v2';
+  var CATS = [
+    {id:'s', label:'¿Quién?', one:'sospechoso', cards:['Verduzco','Mostaza','Marlene','Moradillo','Escarlata','Blanca']},
+    {id:'w', label:'¿Con qué?', one:'arma', cards:['Candelabro','Daga','Tubo de plomo','Revólver','Soga','Llave inglesa']},
+    {id:'r', label:'¿Dónde?', one:'habitación', cards:['Salón de baile','Sala de billar','Terraza','Comedor','Pasillo','Cocina','Biblioteca','Sala','Estudio']}
+  ];
+  var CARDS = [], BYID = {};
+  CATS.forEach(function(c, ci){
+    c.ids = [];
+    c.cards.forEach(function(n, i){
+      var id = c.id + i;
+      var o = {id:id, name:n, cat:ci};
+      CARDS.push(o); BYID[id] = o; c.ids.push(id);
+    });
+  });
+  var TOTAL = CARDS.length, TO_DEAL = TOTAL - 3;
+
+  function build(n, names, setup){
+    var players = [];
+    for (var i = 0; i < n; i++) players.push((names && names[i]) || (setup ? (i === 0 ? 'Yo' : 'Jugador ' + (i + 1)) : ''));
+    var h = (n > 2 && TO_DEAL % n === 0) ? TO_DEAL / n : null;
+    return {players:players, hand:players.map(function(){return h;}), cells:{}, guess:{}, num:{}, log:[], acc:[], hunch:{}, hints:[], setup:!!setup};
+  }
+  function fresh(){ return {players:[], hand:[], cells:{}, guess:{}, num:{}, log:[], acc:[], hunch:{}, hints:[], setup:false}; }
+  function load(){
+    try {
+      var r = localStorage.getItem(KEY);
+      if (r) { var o = JSON.parse(r); if (o && o.players && o.cells && o.log && o.hand) { o.acc = o.acc || []; o.hunch = o.hunch || {}; o.hints = o.hints || []; o.guess = o.guess || {}; o.num = o.num || {}; return o; } }
+    } catch(e) {}
+    return fresh();
+  }
+  var S = load();
+  var tab = 'nb';
+  var numMode = false;
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+  function $(s){ return document.querySelector(s); }
+  function esc(t){ return String(t).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+  function pn(i){ return S.players[i]; }
+
+  /* ---------- Lógica ---------- */
+  function skipped(e){
+    var n = S.players.length, out = [], i = (e.by + 1) % n;
+    while (i !== e.by) {
+      if (e.ans >= 0 && i === e.ans) break;
+      out.push(i); i = (i + 1) % n;
+    }
+    return out;
+  }
+
+  function solve(){
+    var n = S.players.length, cell = {}, conflicts = {}, changed = false, clauses = [], notEnv = {}, wrong = [], won = null;
+    function set(c, p, v){
+      cell[c] = cell[c] || {};
+      var cur = cell[c][p];
+      if (cur) { if (cur.v !== v) conflicts[c] = true; return; }
+      cell[c][p] = {v:v, src:'a'}; changed = true;
+    }
+    Object.keys(S.cells).forEach(function(k){
+      var a = k.split(':'), c = a[0], p = +a[1];
+      if (p < n && BYID[c]) { cell[c] = cell[c] || {}; cell[c][p] = {v:S.cells[k], src:'m'}; }
+    });
+    S.log.forEach(function(e, ix){
+      var cards = [e.s, e.w, e.r];
+      skipped(e).forEach(function(p){ cards.forEach(function(c){ set(c, p, 'n'); }); });
+      if (e.ans >= 0) {
+        clauses.push({p:e.ans, cards:cards, label:String(ix + 1)});
+        if (e.shown) set(e.shown, e.ans, 'y');
+      }
+    });
+    S.hints.forEach(function(hn, ix){
+      if (hn.p < n) clauses.push({p:hn.p, cards:hn.cards, label:String.fromCharCode(65 + ix % 26), hint:true, ix:ix});
+    });
+    S.acc.forEach(function(a){
+      if (a.by >= n) return;
+      if (a.ok) won = a; else wrong.push([a.s, a.w, a.r]);
+    });
+    if (won) {
+      var ws = [won.s, won.w, won.r];
+      CARDS.forEach(function(cd){
+        if (ws.indexOf(cd.id) >= 0) { for (var p = 0; p < n; p++) set(cd.id, p, 'n'); }
+        else notEnv[cd.id] = true;
+      });
+    }
+    var guard = 0;
+    do {
+      changed = false; guard++;
+      CARDS.forEach(function(cd){
+        var c = cd.id, owners = [];
+        for (var p = 0; p < n; p++) if (cell[c] && cell[c][p] && cell[c][p].v === 'y') owners.push(p);
+        if (owners.length > 1) conflicts[c] = true;
+        if (owners.length) for (var q = 0; q < n; q++) if (q !== owners[0]) set(c, q, 'n');
+      });
+      for (var p = 0; p < n; p++) {
+        var h = S.hand[p];
+        if (h == null || h === '') continue;
+        var ys = 0, ns = 0, unk = [];
+        CARDS.forEach(function(cd){
+          var x = cell[cd.id] && cell[cd.id][p];
+          if (!x) unk.push(cd.id); else if (x.v === 'y') ys++; else ns++;
+        });
+        if (ys > h) { CARDS.forEach(function(cd){ if (cell[cd.id] && cell[cd.id][p] && cell[cd.id][p].v === 'y') conflicts[cd.id] = true; }); }
+        else if (ys === h) unk.forEach(function(c){ set(c, p, 'n'); });
+        else if (TOTAL - ns === h) unk.forEach(function(c){ set(c, p, 'y'); });
+      }
+      clauses.forEach(function(cl){
+        var rem = [], sat = false;
+        cl.cards.forEach(function(c){
+          var x = cell[c] && cell[c][cl.p];
+          if (x && x.v === 'y') sat = true;
+          else if (!(x && x.v === 'n')) rem.push(c);
+        });
+        if (sat) return;
+        if (rem.length === 1) set(rem[0], cl.p, 'y');
+      });
+      CATS.forEach(function(cat){
+        var poss = cat.ids.filter(function(c){
+          if (notEnv[c]) return false;
+          for (var p = 0; p < n; p++) if (cell[c] && cell[c][p] && cell[c][p].v === 'y') return false;
+          return true;
+        });
+        if (poss.length === 1) for (var p = 0; p < n; p++) set(poss[0], p, 'n');
+      });
+      function allNo(c){ for (var p = 0; p < n; p++) if (!(cell[c] && cell[c][p] && cell[c][p].v === 'n')) return false; return true; }
+      wrong.forEach(function(cs){
+        var known = cs.filter(allNo);
+        if (known.length === 3) cs.forEach(function(c){ conflicts[c] = true; });
+        if (known.length === 2) cs.forEach(function(c){ if (known.indexOf(c) < 0 && !notEnv[c]) { notEnv[c] = true; changed = true; } });
+      });
+      CARDS.forEach(function(cd){
+        var c = cd.id; if (!notEnv[c]) return;
+        var unk = [], hasY = false;
+        for (var p = 0; p < n; p++) { var x = cell[c] && cell[c][p]; if (!x) unk.push(p); else if (x.v === 'y') hasY = true; }
+        if (!hasY && unk.length === 1) set(c, unk[0], 'y');
+      });
+    } while (changed && guard < 50);
+
+    var pending = [], marks = {};
+    clauses.forEach(function(cl){
+      var rem = [], sat = false;
+      cl.cards.forEach(function(c){
+        var x = cell[c] && cell[c][cl.p];
+        if (x && x.v === 'y') sat = true;
+        else if (!(x && x.v === 'n')) rem.push(c);
+      });
+      if (sat || !rem.length) return;
+      pending.push({label:cl.label, p:cl.p, cards:cl.cards, rem:rem, hint:!!cl.hint, ix:cl.ix});
+      rem.forEach(function(c){ var k = c + ':' + cl.p; (marks[k] = marks[k] || []).push(cl.label); });
+    });
+    var status = {}, owner = {};
+    CARDS.forEach(function(cd){
+      var c = cd.id, ow = -1, allN = true;
+      for (var p = 0; p < n; p++) {
+        var x = cell[c] && cell[c][p];
+        if (x && x.v === 'y' && ow < 0) ow = p;
+        if (!(x && x.v === 'n')) allN = false;
+      }
+      if (ow >= 0) { status[c] = 'held'; owner[c] = ow; }
+      else if (notEnv[c]) { status[c] = 'held'; owner[c] = -1; if (allN) conflicts[c] = true; }
+      else if (allN) status[c] = 'env';
+      else status[c] = 'poss';
+    });
+    return {cell:cell, status:status, owner:owner, won:won, pending:pending, marks:marks, conflicts:Object.keys(conflicts)};
+  }
+
+  /* ---------- Render ---------- */
+  var R;
+  function hunchNote(cat, envId){
+    var hid = S.hunch[cat.id];
+    if (!hid) return '';
+    if (envId) return hid === envId ? ' · coincide con tu sospecha' : ' · tu sospecha era ' + BYID[hid].name;
+    if (R.status[hid] === 'held') return ' · tu sospecha ' + BYID[hid].name + ' quedó descartada';
+    return ' · sospechas: ' + BYID[hid].name;
+  }
+  function renderCase(){
+    var held = 0, slots = '', known = 0, missing = [], sol = [];
+    CARDS.forEach(function(cd){ if (R.status[cd.id] === 'held') held++; });
+    var LK = ['asesino', 'arma', 'habitación'], LG = ['supuesto asesino', 'arma probable', 'lugar probable'];
+    CATS.forEach(function(cat, ci){
+      var envs = cat.ids.filter(function(c){ return R.status[c] === 'env'; });
+      var poss = cat.ids.filter(function(c){ return R.status[c] === 'poss'; });
+      if (envs.length === 1) {
+        known++; sol.push(BYID[envs[0]].name);
+        slots += '<div class="slot known"><span class="lb">' + esc(LK[ci]) + '</span><span class="vl">' + esc(BYID[envs[0]].name) + '</span><span class="sb">en el sobre' + esc(hunchNote(cat, envs[0])) + '</span></div>';
+      } else {
+        missing.push(cat.one + ' (quedan ' + poss.length + ')');
+        var lst = R.info.info[ci].list, top = lst[0], sec = lst[1];
+        var clear = top && (!sec || top.p - sec.p >= 0.03);
+        slots += '<div class="slot"><span class="lb">' + esc(LG[ci]) + '</span>' +
+          (clear ? '<span class="vl guess">' + esc(BYID[top.c].name) + '</span><span class="sb">' + Math.round(top.p * 100) + '% · quedan ' + poss.length + esc(hunchNote(cat, null)) + '</span>'
+                 : '<span class="vl">?</span><span class="sb">Sin datos para inclinarse · quedan ' + poss.length + esc(hunchNote(cat, null)) + '</span>') + '</div>';
+      }
+    });
+    var msg;
+    if (R.won) msg = '<p class="msg"><b>Partida terminada.</b> ' + esc(pn(R.won.by)) + ' acertó con ' + esc(BYID[R.won.s].name) + ', ' + esc(BYID[R.won.w].name) + ', ' + esc(BYID[R.won.r].name) + '.</p>';
+    else if (known === 3) msg = '<p class="msg"><b>Caso resuelto.</b> En tu turno acusa: ' + esc(sol[0]) + ', con ' + esc(sol[1]) + ', en ' + esc(sol[2]) + '. Mira el sobre en secreto. Si fallas quedas fuera, así que revisa tus marcas una vez más antes de acusar.</p>';
+    else msg = '<p class="msg">Falta identificar: ' + esc(missing.join(', ')) + '.</p>';
+    var pct = Math.round(held / TO_DEAL * 100);
+    var el = $('#case');
+    el.className = 'case' + ((known === 3 || R.won) ? ' solved' : '');
+    el.innerHTML = '<div class="slots">' + slots + '</div>' + msg +
+      '<div><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="' + TO_DEAL + '" aria-valuenow="' + held + '"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="barrow"><span>Cartas descartadas</span><span>' + held + ' / ' + TO_DEAL + '</span></div></div>';
+  }
+
+  function renderHunch(){
+    var h = '<h3>Mi sospecha</h3><div class="grid2">';
+    CATS.forEach(function(cat){
+      var o = opt('', 'Sin definir', !S.hunch[cat.id]);
+      cat.ids.forEach(function(c){
+        var gone = R.status[c] === 'held';
+        o += opt(c, BYID[c].name + (gone ? ' (descartada)' : ''), S.hunch[cat.id] === c);
+      });
+      h += '<label>' + esc(cat.one) + '<select data-hunch-cat="' + cat.id + '" id="h-' + cat.id + '">' + o + '</select></label>';
+    });
+    h += '</div>';
+    var gone = [];
+    CATS.forEach(function(cat){ var c = S.hunch[cat.id]; if (c && R.status[c] === 'held') gone.push(BYID[c].name); });
+    h += '<p class="hint">' + (gone.length ? '<b>Ojo:</b> ya se descartó ' + esc(gone.join(', ')) + '. Cambia esa sospecha.' : 'También puedes tocar el nombre de una carta en la tabla para marcarla con círculo.') + '</p>';
+    $('#hunch').innerHTML = h;
+  }
+
+  function renderPend(){
+    var h = '<div class="row" style="justify-content:space-between"><h3>Pistas pendientes</h3><button class="btn ghost sm" type="button" data-goto="mesa">Anotar sugerencia</button></div>';
+    if (!R.pending.length) {
+      h += '<p class="hint">Sin pistas por ahora. Cuando alguien muestre una carta que no viste, regístralo en Sugerencias y queda aquí como "una de estas tres".</p>';
+    } else {
+      h += '<p class="hint">Cada pista dice que ese jugador tiene al menos una de esas cartas. Toca el nombre cuando confirmes que la tiene, o la X cuando descartes que la tenga. El número también aparece en las casillas de la tabla.</p><ul class="pl">';
+      R.pending.forEach(function(pd){
+        h += '<li><span class="who"><b class="lb2">' + esc(pd.label) + '</b>' + esc(pn(pd.p)) + ' tiene una de:' +
+          (pd.hint ? ' <button class="btn ghost sm" type="button" data-hdel="' + pd.ix + '" aria-label="Eliminar pista">Quitar</button>' : '') + '</span><span class="chips">';
+        pd.rem.forEach(function(c){
+          var k = c + ':' + pd.p;
+          h += '<span class="chip"><button type="button" data-yes="' + k + '" title="Sí la tiene">' + esc(BYID[c].name) + '</button><button type="button" data-no="' + k + '" aria-label="No tiene ' + esc(BYID[c].name) + '">✕</button></span>';
+        });
+        h += '</span></li>';
+      });
+      h += '</ul>';
+    }
+    var po = '';
+    for (var i = 0; i < S.players.length; i++) po += opt(i, pn(i), false);
+    var so = '';
+    CATS.forEach(function(cat){
+      var o = '';
+      cat.ids.forEach(function(c){ o += opt(c, BYID[c].name, false); });
+      so += '<label>' + esc(cat.one) + '<select id="ph-' + cat.id + '">' + o + '</select></label>';
+    });
+    h += '<details class="hint-add"><summary>Añadir pista suelta</summary><div class="grid2"><label>Jugador<select id="ph-p">' + po + '</select></label>' + so + '</div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn sm" type="button" data-addhint="1">Añadir pista</button></div></details>';
+    $('#pend').innerHTML = h;
+  }
+
+  function renderAcc(){
+    var ul = $('#alog');
+    if (!S.acc.length) { ul.innerHTML = '<li><p class="empty">Nadie ha acusado todavía.</p></li>'; return; }
+    var h = '';
+    for (var k = S.acc.length - 1; k >= 0; k--) {
+      var a = S.acc[k];
+      var t = pn(a.by) + ' acusa: ' + BYID[a.s].name + ', ' + BYID[a.w].name + ', ' + BYID[a.r].name;
+      var d = a.ok ? 'Es la solución del caso.' : 'Al menos una de las tres cartas no está en el sobre.';
+      h += '<li class="entry"><span class="t">' + esc(t) + '</span><button class="x" type="button" data-adel="' + k + '" aria-label="Eliminar acusación">✕</button>' +
+        '<span class="d"><span class="pill ' + (a.ok ? 'win' : 'fail') + '">' + (a.ok ? 'Acertó · ganó' : 'Falló · fuera') + '</span> ' + esc(d) + '</span></li>';
+    }
+    ul.innerHTML = h;
+  }
+
+  function renderGrid(){
+    var n = S.players.length, h = '<thead><tr><th class="first">Carta</th>', out = {};
+    S.acc.forEach(function(a){ if (!a.ok) out[a.by] = true; });
+    for (var p = 0; p < n; p++) h += '<th class="' + (p === 0 ? 'me' : '') + (out[p] ? ' out' : '') + '" title="' + esc(pn(p)) + (out[p] ? ' (fuera por acusación fallida)' : '') + '"><span class="pn">' + esc(pn(p)) + '</span></th>';
+    h += '</tr></thead><tbody>';
+    CATS.forEach(function(cat){
+      h += '<tr class="cat"><td class="first" colspan="' + (n + 1) + '">' + esc(cat.label) + '</td></tr>';
+      cat.ids.forEach(function(c){
+        var st = R.status[c], cls = st === 'held' ? 'gone' : (st === 'env' ? 'env' : '');
+        var tag = st === 'held' ? '<span class="tag">' + (R.owner[c] >= 0 ? 'la tiene ' + esc(pn(R.owner[c])) : 'descartada') + '</span>' : (st === 'env' ? '<span class="tag">EN EL SOBRE</span>' : '');
+        h += '<tr class="' + cls + '"><td class="first"><button type="button" class="nm nmb' + (S.hunch[CATS[BYID[c].cat].id] === c ? ' hunch' : '') + '" data-hunch="' + c + '" aria-pressed="' + (S.hunch[CATS[BYID[c].cat].id] === c) + '" title="Marcar como mi sospecha">' + esc(BYID[c].name) + '</button>' + tag + '</td>';
+        for (var p = 0; p < n; p++) {
+          var x = R.cell[c] && R.cell[c][p], v = x ? x.v : '', src = x ? x.src : '';
+          var gk = c + ':' + p;
+          var mk = (!v && R.marks[gk]) ? R.marks[gk] : null;
+          var g = (!v && !mk && S.guess[gk]) ? S.guess[gk] : '';
+          var mnum = S.num[gk] || '';
+          var labState = v === 'y' ? 'la tiene' : v === 'n' ? 'no la tiene' : (mk ? 'posible, pista ' + mk.join(', ') : (g === 'gy' ? 'creo que sí la tiene' : (g === 'gn' ? 'creo que no la tiene' : 'sin marcar')));
+          var lab = BYID[c].name + ', ' + pn(p) + ': ' + labState + (src === 'a' ? ' (deducido)' : '') + (mnum ? ' · tu nota: ' + mnum : '');
+          if (numMode && !v) {
+            h += '<td><input type="text" inputmode="numeric" pattern="[0-9,]*" maxlength="3" class="numin" data-c="' + c + '" data-p="' + p + '" value="' + esc(mnum) + '" aria-label="' + esc(lab) + '" placeholder="' + (mk ? esc(mk.join(',')) : '') + '"></td>';
+          } else {
+            var sym = v === 'y' ? '✓' : (v === 'n' ? '✕' : (mk ? '<span class="pm">' + esc(mk.join(',')) + '</span>' : (g ? '?' : '')));
+            var badge = mnum ? '<span class="numbadge">' + esc(mnum) + '</span>' : '';
+            h += '<td><button type="button" class="cb ' + v + ' ' + src + (mk ? ' q' : '') + (g ? ' ' + g : '') + '" data-c="' + c + '" data-p="' + p + '" aria-label="' + esc(lab) + '">' + sym + badge + '</button></td>';
+          }
+        }
+        h += '</tr>';
+      });
+    });
+    h += '</tbody>';
+    $('#grid').innerHTML = h;
+    var cf = $('#conf');
+    if (R.conflicts.length) {
+      cf.innerHTML = '<div class="warn"><b>Hay marcas que se contradicen:</b> ' + esc(R.conflicts.map(function(c){ return BYID[c].name; }).join(', ')) + '. Revisa esas cartas o las sugerencias registradas.</div>';
+    } else cf.innerHTML = '';
+  }
+
+  function computeInfo(){
+    var n = S.players.length, cnt = {};
+    R.pending.forEach(function(pd){ pd.rem.forEach(function(c){ cnt[c] = (cnt[c] || 0) + 1; }); });
+    function elig(c){
+      var k = 0;
+      for (var p = 0; p < n; p++) { var x = R.cell[c] && R.cell[c][p]; if (!(x && x.v === 'n')) k++; }
+      return k;
+    }
+    function wt(c){ return 1 / ((1 + 0.6 * elig(c)) * (1 + 0.6 * (cnt[c] || 0))); }
+    var info = CATS.map(function(cat){
+      var envs = cat.ids.filter(function(c){ return R.status[c] === 'env'; });
+      var poss = cat.ids.filter(function(c){ return R.status[c] === 'poss'; });
+      var list = [], tot = 0;
+      if (envs.length === 1) list = [{c:envs[0], p:1}];
+      else {
+        poss.forEach(function(c){ tot += wt(c); });
+        list = poss.map(function(c){ return {c:c, p:wt(c) / tot}; }).sort(function(x, y){ return y.p - x.p; });
+      }
+      var mine = cat.ids.filter(function(c){ return R.cell[c] && R.cell[c][0] && R.cell[c][0].v === 'y'; });
+      var held = cat.ids.filter(function(c){ return R.status[c] === 'held'; });
+      return {cat:cat, list:list, resolved:envs.length === 1, mine:mine, held:held, env:envs[0]};
+    });
+    var combos = 1; info.forEach(function(x){ combos *= Math.max(1, x.list.length); });
+    return {info:info, combos:combos};
+  }
+
+  function renderTip(){
+    var info = R.info.info, combos = R.info.combos;
+    function pick(x){
+      if (x.resolved) return {c:(x.mine[0] || x.held[0] || x.env), bluff:true};
+      return {c:x.list[0].c, bluff:false};
+    }
+    var sp = pick(info[0]), wp = pick(info[1]), rp;
+    var here = S.here && BYID[S.here] ? S.here : '';
+    if (here) rp = {c:here, bluff:R.status[here] === 'held' || info[2].resolved};
+    else rp = pick(info[2]);
+    var why = [];
+    if (sp.bluff || wp.bluff) why.push('Ya resolviste ' + [sp.bluff ? 'el sospechoso' : '', wp.bluff ? 'el arma' : ''].filter(Boolean).join(' y ') + ': se usa una carta que ya conoces para no regalar pistas.');
+    if (!sp.bluff || !wp.bluff) why.push('Las cartas sin resolver son las más probables de estar en el sobre. Si nadie muestra carta, ganas tres candidatas de un golpe.');
+    if (here) {
+      if (R.status[here] === 'held') why.push('Esa habitación ya está descartada. Sirve para preguntar sin arriesgar, y la respuesta te dice algo sobre las otras dos cartas.');
+    } else if (!info[2].resolved) why.push('Ve hacia ' + BYID[info[2].list[0].c].name + ', la habitación más probable, y sugiere desde ahí.');
+    var ro = opt('', 'Sin definir', !here);
+    CATS[2].ids.forEach(function(c){ ro += opt(c, BYID[c].name + (R.status[c] === 'held' ? ' (descartada)' : ''), here === c); });
+    var probs = info.map(function(x){
+      if (x.resolved) return '';
+      var top = x.list.slice(0, 4).map(function(o, i){
+        return '<span class="pc' + (i === 0 ? ' top' : '') + '">' + esc(BYID[o.c].name) + ' ' + Math.round(o.p * 100) + '%</span>';
+      }).join('');
+      return '<div><span class="kicker">' + esc(x.cat.one) + '</span><div class="pr">' + top + (x.list.length > 4 ? '<span class="pc">+' + (x.list.length - 4) + '</span>' : '') + '</div></div>';
+    }).join('');
+    $('#tip').innerHTML = '<span class="kicker">Próxima sugerencia</span>' +
+      '<label>Estoy en<select id="here">' + ro + '</select></label>' +
+      '<p class="say"><b>' + esc(BYID[sp.c].name) + '</b> · <b>' + esc(BYID[wp.c].name) + '</b> · <b>' + esc(BYID[rp.c].name) + '</b></p>' +
+      '<p class="note">' + esc(why.join(' ')) + '</p>' +
+      (probs ? '<span class="kicker" style="margin-top:4px">Probabilidad de estar en el sobre</span>' + probs : '') +
+      '<span class="note">Combinaciones posibles del sobre: ' + combos + '. Los porcentajes son un estimado: pesan menos las cartas que aparecen en pistas pendientes.</span>';
+  }
+
+  function opt(v, t, sel){ return '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(t) + '</option>'; }
+  function buildForm(keep){
+    var n = S.players.length, by = keep && keep.by != null ? keep.by : 0;
+    var h = '';
+    for (var i = 0; i < n; i++) h += opt(i, pn(i), i === by);
+    $('#f-by').innerHTML = h;
+    CATS.forEach(function(cat){
+      var o = '';
+      cat.ids.forEach(function(c){ o += opt(c, BYID[c].name, keep && keep[cat.id] === c); });
+      $('#f-' + cat.id).innerHTML = o;
+    });
+    var ah = '';
+    for (var j = 0; j < n; j++) ah += opt(j, pn(j), j === 0);
+    $('#a-by').innerHTML = ah;
+    CATS.forEach(function(cat){
+      var o = '';
+      cat.ids.forEach(function(c){ o += opt(c, BYID[c].name, false); });
+      $('#a-' + cat.id).innerHTML = o;
+    });
+    buildAns();
+  }
+  function buildAns(){
+    var n = S.players.length, by = +$('#f-by').value, cur = $('#f-ans').value;
+    var o = opt('', 'Elegir…', false) + opt('-1', 'Nadie pudo mostrar', false);
+    for (var i = 0; i < n; i++) if (i !== by) o += opt(i, pn(i), false);
+    $('#f-ans').innerHTML = o;
+    if ($('#f-ans').querySelector('option[value="' + cur + '"]')) $('#f-ans').value = cur;
+    buildShown();
+  }
+  function buildShown(){
+    var by = +$('#f-by').value, ans = $('#f-ans').value;
+    var wrap = $('#f-shown-wrap');
+    if (by === 0 && ans !== '' && +ans > 0) {
+      wrap.hidden = false;
+      var ids = [$('#f-s').value, $('#f-w').value, $('#f-r').value];
+      var prev = $('#f-shown').value;
+      var o = opt('', 'No la anoté', prev === '' || ids.indexOf(prev) < 0);
+      ids.forEach(function(c){ o += opt(c, BYID[c].name, c === prev); });
+      $('#f-shown').innerHTML = o;
+    } else { wrap.hidden = true; $('#f-shown').innerHTML = ''; }
+  }
+
+  function renderLog(){
+    var ul = $('#log');
+    if (!S.log.length) { ul.innerHTML = '<li><p class="empty">Aún no hay sugerencias. Registra la primera arriba y la libreta marca las casillas que se deducen.</p></li>'; return; }
+    var h = '';
+    for (var k = S.log.length - 1; k >= 0; k--) {
+      var e = S.log[k];
+      var sk = skipped(e).map(pn);
+      var line1 = '#' + (k + 1) + ' · ' + pn(e.by) + ' sugiere ' + BYID[e.s].name + ', ' + BYID[e.w].name + ', ' + BYID[e.r].name;
+      var res = e.ans >= 0 ? (pn(e.ans) + ' mostró una carta' + (e.shown ? ': ' + BYID[e.shown].name : '')) : 'Nadie pudo mostrar carta';
+      var eff = sk.length ? ' Sin ninguna de las tres: ' + sk.join(', ') + '.' : '';
+      if (e.ans < 0 && !sk.length) eff = '';
+      h += '<li class="entry"><span class="t">' + esc(line1) + '</span><button class="x" type="button" data-del="' + k + '" aria-label="Eliminar sugerencia">✕</button><span class="d">' + esc(res + '.' + eff) + '</span></li>';
+    }
+    ul.innerHTML = h;
+  }
+
+  function renderSetup(){
+    var n = S.players.length, h = '';
+    for (var i = 0; i < n; i++) {
+      var hv = S.hand[i] == null ? '' : S.hand[i];
+      var ph = i === 0 ? 'Tu nombre' : (i === 1 ? 'Quien juega después de ti' : 'Jugador ' + (i + 1));
+      h += '<div class="prow"><span class="ix">' + (i + 1) + '</span>' +
+        '<label>' + (i === 0 ? 'Tú' : 'Nombre') + '<input type="text" data-name="' + i + '" value="' + esc(pn(i)) + '" placeholder="' + esc(ph) + '" maxlength="24"></label>' +
+        '<label>Cartas<input type="number" inputmode="numeric" min="0" max="18" data-hand="' + i + '" value="' + hv + '"></label></div>';
+    }
+    $('#plist').innerHTML = h || '<p class="note">Elige primero cuántos jugadores son.</p>';
+    var s = '';
+    for (var c = 2; c <= 6; c++) s += '<button type="button" data-count="' + c + '" aria-pressed="' + (c === n) + '">' + c + '</button>';
+    $('#count').innerHTML = s;
+  }
+
+  function recompute(){
+    shell();
+    if (!S.setup) return;
+    R = solve();
+    var dirty = false;
+    Object.keys(S.guess).forEach(function(k){
+      var a = k.split(':'), c = a[0], p = +a[1];
+      var x = R.cell[c] && R.cell[c][p];
+      if (x && x.v) { delete S.guess[k]; dirty = true; }
+    });
+    if (dirty) save();
+    R.info = computeInfo(); renderCase(); renderHunch(); renderPend(); renderGrid(); renderTip(); renderLog(); renderAcc();
+  }
+  function shell(){
+    var on = !!S.setup;
+    $('#case').hidden = !on;
+    document.querySelector('.tabs').hidden = !on;
+    $('#intro').hidden = on; $('#startbox').hidden = on; $('#resetbox').hidden = !on;
+    $('#sec-lg').hidden = !on; $('#sec-ac').hidden = !on;
+    if (!on) showTab('mesa');
+  }
+  function showTab(t){
+    if (!S.setup) t = 'mesa';
+    tab = t;
+    ['nb','mesa'].forEach(function(k){
+      var p = $('#p-' + k), on = k === t;
+      p.hidden = !on; p.style.display = on ? 'flex' : 'none';
+      $('#t-' + k).setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  /* ---------- Eventos ---------- */
+  document.querySelector('.tabs').addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-tab]'); if (b) showTab(b.getAttribute('data-tab'));
+  });
+  $('#grid').addEventListener('click', function(ev){
+    var hb = ev.target.closest('[data-hunch]');
+    if (hb) {
+      var hc = hb.getAttribute('data-hunch'), cid = CATS[BYID[hc].cat].id;
+      if (S.hunch[cid] === hc) delete S.hunch[cid]; else S.hunch[cid] = hc;
+      save(); recompute(); return;
+    }
+    var b = ev.target.closest('.cb'); if (!b) return;
+    var c = b.getAttribute('data-c'), p = b.getAttribute('data-p'), k = c + ':' + p;
+    var x = R.cell[c] && R.cell[c][p];
+    if (x && x.src === 'a') {
+      var cur = S.cells[k];
+      if (!cur) S.cells[k] = 'y'; else if (cur === 'y') S.cells[k] = 'n'; else delete S.cells[k];
+    } else if (x && x.v === 'y') {
+      S.cells[k] = 'n';
+    } else if (x && x.v === 'n') {
+      delete S.cells[k]; S.guess[k] = 'gn';
+    } else if (S.guess[k] === 'gn') {
+      S.guess[k] = 'gy';
+    } else if (S.guess[k] === 'gy') {
+      delete S.guess[k];
+    } else {
+      S.cells[k] = 'y';
+    }
+    save(); recompute();
+  });
+  $('#grid').addEventListener('input', function(ev){
+    var t = ev.target; if (!t.classList.contains('numin')) return;
+    var val = t.value.replace(/[^0-9,]/g, '').slice(0, 3);
+    if (val !== t.value) t.value = val;
+    var k = t.getAttribute('data-c') + ':' + t.getAttribute('data-p');
+    if (val) S.num[k] = val; else delete S.num[k];
+    save();
+  });
+  $('#mode').addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-mode]'); if (!b) return;
+    numMode = b.getAttribute('data-mode') === 'num';
+    $('#mode').querySelectorAll('[data-mode]').forEach(function(x){
+      x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+    });
+    renderGrid();
+  });
+  $('#tip').addEventListener('change', function(ev){
+    if (ev.target.id !== 'here') return;
+    S.here = ev.target.value; save(); renderTip();
+  });
+  $('#pend').addEventListener('click', function(ev){
+    var t = ev.target.closest('button'); if (!t) return;
+    if (t.hasAttribute('data-goto')) { showTab(t.getAttribute('data-goto')); return; }
+    if (t.hasAttribute('data-yes')) { S.cells[t.getAttribute('data-yes')] = 'y'; save(); recompute(); return; }
+    if (t.hasAttribute('data-no')) { S.cells[t.getAttribute('data-no')] = 'n'; save(); recompute(); return; }
+    if (t.hasAttribute('data-hdel')) { S.hints.splice(+t.getAttribute('data-hdel'), 1); save(); recompute(); return; }
+    if (t.hasAttribute('data-addhint')) {
+      S.hints.push({p:+$('#ph-p').value, cards:[$('#ph-s').value, $('#ph-w').value, $('#ph-r').value]});
+      save(); recompute();
+    }
+  });
+  $('#hunch').addEventListener('change', function(ev){
+    var t = ev.target, cid = t.getAttribute('data-hunch-cat'); if (!cid) return;
+    if (t.value) S.hunch[cid] = t.value; else delete S.hunch[cid];
+    save(); recompute();
+  });
+  $('#aform').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    S.acc.push({by:+$('#a-by').value, s:$('#a-s').value, w:$('#a-w').value, r:$('#a-r').value, ok:$('#a-ok').value === '1'});
+    save(); recompute();
+  });
+  $('#alog').addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-adel]'); if (!b) return;
+    S.acc.splice(+b.getAttribute('data-adel'), 1); save(); recompute();
+  });
+  $('#form').addEventListener('change', function(ev){
+    var id = ev.target.id;
+    if (id === 'f-by') buildAns(); else if (id !== 'f-shown') buildShown();
+  });
+  $('#form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var ans = $('#f-ans').value, err = $('#f-err');
+    if (ans === '') { err.textContent = 'Indica quién mostró carta, o elige "Nadie pudo mostrar".'; return; }
+    err.textContent = '';
+    var e = {by:+$('#f-by').value, s:$('#f-s').value, w:$('#f-w').value, r:$('#f-r').value, ans:+ans, shown:$('#f-shown').value || null};
+    S.log.push(e); save();
+    buildForm({by:e.by, s:e.s, w:e.w, r:e.r});
+    recompute();
+  });
+  $('#log').addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-del]'); if (!b) return;
+    S.log.splice(+b.getAttribute('data-del'), 1); save(); recompute();
+  });
+  $('#plist').addEventListener('change', function(ev){
+    var t = ev.target;
+    if (t.hasAttribute('data-name')) { var ix = +t.getAttribute('data-name'); S.players[ix] = t.value.trim() || (S.setup ? (ix === 0 ? 'Yo' : 'Jugador ' + (ix + 1)) : ''); t.value = S.players[ix]; }
+    else if (t.hasAttribute('data-hand')) { var v = t.value === '' ? null : Math.max(0, Math.min(18, parseInt(t.value, 10) || 0)); S.hand[+t.getAttribute('data-hand')] = v; t.value = v == null ? '' : v; }
+    save(); if (S.setup) { buildForm(); recompute(); }
+  });
+  $('#count').addEventListener('click', function(ev){
+    var b = ev.target.closest('[data-count]'); if (!b) return;
+    var n = +b.getAttribute('data-count'), old = S.players.length; if (n === old) return;
+    var names = S.players.slice(), hand = S.hand.slice();
+    var f = build(n, names, S.setup);
+    var even = n > 2 && TO_DEAL % n === 0;
+    f.hand = f.hand.map(function(v, i){ return even ? TO_DEAL / n : (i < old && TO_DEAL % old !== 0 ? hand[i] : null); });
+    Object.keys(S.cells).forEach(function(k){ if (+k.split(':')[1] < n) f.cells[k] = S.cells[k]; });
+    f.log = S.log.filter(function(e){ return e.by < n && e.ans < n; });
+    f.acc = S.acc.filter(function(a){ return a.by < n; }); f.hunch = S.hunch; f.here = S.here; f.hints = S.hints.filter(function(h){ return h.p < n; });
+    Object.keys(S.guess).forEach(function(k){ if (+k.split(':')[1] < n) f.guess[k] = S.guess[k]; });
+    Object.keys(S.num).forEach(function(k){ if (+k.split(':')[1] < n) f.num[k] = S.num[k]; });
+    S = f; save(); renderSetup(); if (S.setup) { buildForm(); recompute(); }
+  });
+  $('#start').addEventListener('click', function(){
+    var err = $('#start-err');
+    if (S.players.length < 2) { err.textContent = 'Elige cuántos jugadores son.'; return; }
+    var seen = {};
+    for (var i = 0; i < S.players.length; i++) {
+      var nm = (S.players[i] || '').trim();
+      if (!nm) { err.textContent = 'Falta el nombre del jugador ' + (i + 1) + '.'; return; }
+      if (seen[nm.toLowerCase()]) { err.textContent = 'Hay dos jugadores con el nombre "' + nm + '".'; return; }
+      seen[nm.toLowerCase()] = 1;
+    }
+    err.textContent = ''; S.setup = true; save();
+    renderSetup(); buildForm(); recompute(); showTab('nb');
+  });
+  var armed = false, armTimer = null;
+  $('#reset').addEventListener('click', function(){
+    var b = $('#reset');
+    if (!armed) {
+      armed = true; b.textContent = 'Confirmar: se borra todo';
+      armTimer = setTimeout(function(){ armed = false; b.textContent = 'Empezar de nuevo'; }, 4000);
+      return;
+    }
+    clearTimeout(armTimer); armed = false; b.textContent = 'Empezar de nuevo';
+    S = fresh(); save(); renderSetup(); recompute(); showTab('mesa');
+  });
+
+  renderSetup(); if (S.setup) buildForm(); recompute(); showTab(S.setup ? 'nb' : 'mesa');
+})();
+</script>
